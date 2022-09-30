@@ -10,7 +10,8 @@ import torch
 from torch.nn import functional as F
 
 def assign_coords(coords):
-
+    
+    # 归一化处理
     coords = (coords - coords.mean(dim=(0, 1, 2, 3))) / coords.std(dim=(0, 1, 2, 3))
     coords /= coords.abs().max(dim=2, keepdim=True)[0].max(dim=3, keepdim=True)[0]
 
@@ -21,13 +22,13 @@ def batch_map_coordinates(input, coordinates):
     feats = torch.split(input, split_size_or_sections=1, dim=1)
 
     bs, channels, h, w = input.size()
-    # assign_size = torch.tensor(data=[w - 1, h - 1])
 
     coordinates_h = torch.clip(coordinates[..., 0], 0., h - 1.)
     coordinates_w = torch.clip(coordinates[..., 1], 0., w - 1.)
 
     coordinates = torch.stack([coordinates_w, coordinates_h], dim=-1)
-
+    
+    # 形成左上、右下、右上、左下坐标
     coords_lt = torch.floor(coordinates)
     coords_rb = torch.ceil(coordinates)
     coords_lb = torch.stack([coords_lt[..., 0], coords_rb[..., 1]], dim=-1)
@@ -52,7 +53,8 @@ def batch_map_coordinates(input, coordinates):
     vals_rb = get_vals_by_coords(coords_rb)
     vals_lb = get_vals_by_coords(coords_lb)
     vals_rt = get_vals_by_coords(coords_rt)
-
+    
+    # 双线性插值
     coors_offsets_lt = coordinates - torch.floor(coordinates)
     vals_t = vals_lt + (vals_rt - vals_lt) * coors_offsets_lt[..., 0]
     vals_b = vals_lb + (vals_rb - vals_lb) * coors_offsets_lt[..., 0]
